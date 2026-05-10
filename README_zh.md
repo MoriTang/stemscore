@@ -1,4 +1,4 @@
-# audio-transcribe
+# StemScore
 
 从音频文件自动分离乐器、转录 MIDI、生成分谱。
 

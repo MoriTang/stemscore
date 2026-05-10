@@ -57,7 +57,7 @@ exe = EXE(
     pyz,
     a.scripts,
     exclude_binaries=True,
-    name="transcribe",
+    name="stemscore",
     debug=False,
     strip=False,
     upx=True,
@@ -75,5 +75,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="transcribe",
+    name="stemscore",
 )

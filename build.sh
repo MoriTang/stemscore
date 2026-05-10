@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build standalone executable for transcription pipeline
-# Output: dist/transcribe/transcribe  (~1 GB onedir, includes checkpoint)
+# Output: dist/stemscore/stemscore  (~1 GB onedir, includes checkpoint)
 #
 # Requires: venv with all dependencies installed
 
@@ -24,13 +24,13 @@ mkdir -p /tmp/pyinstaller_config
 
 echo "Building executable..."
 PYINSTALLER_CONFIG_DIR=/tmp/pyinstaller_config \
-    pyinstaller transcribe.spec --noconfirm
+    pyinstaller stemscore.spec --noconfirm
 
 echo ""
-echo "✓ Build complete: dist/transcribe/transcribe"
-echo "  Size: $(du -sh dist/transcribe | cut -f1)"
+echo "✓ Build complete: dist/stemscore/stemscore"
+echo "  Size: $(du -sh dist/stemscore | cut -f1)"
 echo ""
 echo "Usage:"
-echo "  dist/transcribe/transcribe audio.mp3"
-echo "  dist/transcribe/transcribe audio.mp3 --midi"
-echo "  dist/transcribe/transcribe --help"
+echo "  dist/stemscore/stemscore audio.mp3"
+echo "  dist/stemscore/stemscore audio.mp3 --midi"
+echo "  dist/stemscore/stemscore --help"

@@ -1,4 +1,4 @@
-# audio-transcribe
+# StemScore
 
 Automatic music source separation, MIDI transcription, and sheet music generation.
 

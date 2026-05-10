@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-audio-transcribe — 从音频文件自动生成多乐器分谱
+StemScore — 从音频文件自动生成多乐器分谱
 
 Usage:
     python main.py <音频文件> [-o <输出目录>] [选项]
