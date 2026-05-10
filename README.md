@@ -1,12 +1,12 @@
 # audio-transcribe
 
-从音频文件自动分离乐器、转录 MIDI、生成分谱。
+Automatic music source separation, MIDI transcription, and sheet music generation.
 
 ```
-一首歌 → 4~6 轨 WAV → MIDI → MusicXML + PDF 乐谱
+song → 4~6 stems (WAV) → MIDI → MusicXML + PDF scores
 ```
 
-## 快速开始
+## Quick Start
 
 ```bash
 git clone <repo>
@@ -15,118 +15,118 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# 下载模型检查点（~165 MB，首次必需）
+# Download model checkpoint (~165 MB, first time only)
 python3 download_checkpoint.py
 
-# 仅分离音轨（默认）
+# Separate stems only (default)
 python3 main.py song.mp3
 
-# 分离 + 转录 + 乐谱
+# Full pipeline: separate + transcribe + sheet music
 python3 main.py song.mp3 --midi
 ```
 
-## 使用方式
+## Usage
 
 ```bash
-python3 main.py <音频文件> [选项]
+python3 main.py <audio_file> [options]
 ```
 
-| 选项 | 说明 |
-|------|------|
-| `-o DIR` | 输出目录（默认 `./output`） |
-| `-m MODEL` | 分离模型（默认 `htdemucs`） |
-| `--midi` | 开启转录和制谱 |
-| `--no-pdf` | 跳过 PDF，只输出 MusicXML |
-| `--fast` | 快速模式，分离约 2x 加速 |
-| `--solo STEM` | 仅提取指定声部，其余合并 |
-| `--skip-separation` | 跳过分离，使用已有 stems/ |
-| `--skip-transcribe` | 跳过转录，使用已有 midi/ |
-| `--silence-threshold RMS` | 静音检测阈值（默认 0.001） |
-| `-h` | 查看完整参数 |
+| Option | Description |
+|--------|-------------|
+| `-o DIR` | Output directory (default: `./output`) |
+| `-m MODEL` | Separation model (default: `htdemucs`) |
+| `--midi` | Enable transcription and sheet music |
+| `--no-pdf` | Skip PDF, output MusicXML only |
+| `--fast` | Fast mode: ~2x separation speed (slightly lower quality) |
+| `--solo STEM` | Extract a single stem, merge rest into other.wav |
+| `--skip-separation` | Skip separation, use existing stems/ |
+| `--skip-transcribe` | Skip transcription, use existing midi/ |
+| `--silence-threshold RMS` | Silence detection threshold (default: 0.001) |
+| `-h` | Show all options |
 
-### 示例
+### Examples
 
 ```bash
-# 最基本：只分离 4 轨 WAV
+# Basic: separate 4 stems
 python3 main.py song.mp3
 
-# 完整流程：分离 + MIDI + 乐谱
+# Full pipeline: stems + MIDI + sheet music
 python3 main.py song.mp3 --midi
 
-# 快速模式
+# Fast mode
 python3 main.py song.mp3 --midi --fast
 
-# 卡拉OK：提取人声，其余合并为伴奏
+# Karaoke: extract vocals, merge rest into accompaniment
 python3 main.py song.mp3 --solo vocals --midi
 
-# 6 轨分离（实验性，guitar 尚可、piano 有杂音）
+# 6-stem separation (experimental; guitar ok, piano has artifacts)
 python3 main.py song.mp3 -m htdemucs_6s --midi
 
-# 跳过分离和转录，只重新生成乐谱
+# Re-generate sheet music from existing stems + MIDI
 python3 main.py song.mp3 --skip-separation --skip-transcribe --midi
 ```
 
-## 输出结构
+## Output Structure
 
 ```
 output/
-├── stems/          # 分离后的 WAV 音轨
+├── stems/          # Separated WAV tracks
 │   ├── bass.wav
 │   ├── drums.wav
 │   ├── other.wav
 │   └── vocals.wav
-├── midi/           # MIDI 文件（需 --midi）
-├── musicxml/       # MusicXML 乐谱（需 --midi）
-└── pdf/            # PDF 乐谱（需 --midi + LilyPond）
+├── midi/           # MIDI files (requires --midi)
+├── musicxml/       # MusicXML scores (requires --midi)
+└── pdf/            # PDF scores (requires --midi + LilyPond)
 ```
 
-## 模型选择
+## Models
 
-| 模型 | 声轨数 | 说明 |
-|------|--------|------|
-| `htdemucs` | 4 | 默认：drums, bass, other, vocals |
-| `htdemucs_ft` | 4 | 微调版，相同声轨 |
-| `hdemucs_mmi` | 4 | 多乐器训练，相同声轨 |
-| `htdemucs_6s` | 6 | 实验性：+ guitar, piano |
+| Model | Stems | Notes |
+|-------|-------|-------|
+| `htdemucs` | 4 | Default: drums, bass, other, vocals |
+| `htdemucs_ft` | 4 | Fine-tuned, same sources |
+| `hdemucs_mmi` | 4 | Multi-instrument trained, same sources |
+| `htdemucs_6s` | 6 | Experimental: + guitar, piano |
 
-## 乐器乐谱优化
+## Instrument-Specific Formatting
 
-制谱时根据声部自动应用：
+Sheet music is automatically optimized per stem:
 
-| 声部 | 谱号 | 格式 |
-|------|------|------|
-| bass | 低音谱号 | 单行 |
-| drums | 打击乐谱号 | 节奏记谱 |
-| guitar | 低八度高音谱号 | 单行 |
-| piano | 大谱表 | 高低音双行 |
-| vocals | 高音谱号 | 单行 |
+| Stem | Clef | Layout |
+|------|------|--------|
+| bass | Bass clef | Single staff |
+| drums | Percussion clef | Rhythm notation |
+| guitar | Treble 8vb clef | Single staff |
+| piano | Grand staff | Treble + bass |
+| vocals | Treble clef | Single staff |
 
-## 可选：PDF 生成
+## Optional: PDF Generation
 
-PDF 需要 LilyPond。不装也能用——只影响 PDF，MusicXML 正常产出。
+PDF output requires LilyPond. Without it, MusicXML files are still generated normally.
 
 ```bash
-# 下载 LilyPond（~15 MB，一次性）
+# Download LilyPond (~15 MB, one-time)
 python3 download_lilypond.py
 
-# 或用 brew（macOS）
+# Or via Homebrew (macOS)
 brew install lilypond
 ```
 
-MusicXML 可导入 [MuseScore](https://musescore.org)（免费）直接查看编辑。
+MusicXML files can be opened directly in [MuseScore](https://musescore.org) (free).
 
-## 构建独立可执行文件
+## Building a Standalone Executable
 
 ```bash
 ./build.sh
-# 产物：dist/transcribe/transcribe
-# 使用：dist/transcribe/transcribe song.mp3 --midi
+# Output: dist/transcribe/transcribe
+# Usage:  dist/transcribe/transcribe song.mp3 --midi
 ```
 
-## 古典音乐
+## Classical Music
 
-可以用，但分离精度会下降——Demucs 训练数据以流行/摇滚为主。管弦乐大部分乐器会落入 `other` 轨，无法拆分为独立分谱。静音检测会自动跳过空轨。
+Supported, but separation quality is lower — Demucs is trained on pop/rock. Most orchestral instruments end up in the `other` stem and cannot be split into individual parts. Silence detection automatically skips empty stems.
 
-## 许可证
+## License
 
 MIT
