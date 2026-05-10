@@ -139,8 +139,8 @@ MusicXML files can be opened directly in [MuseScore](https://musescore.org) (fre
 
 ```bash
 ./build.sh
-# Output: dist/transcribe/transcribe
-# Usage:  dist/transcribe/transcribe song.mp3 --midi
+# Output: dist/stemscore/stemscore
+# Usage:  dist/stemscore/stemscore song.mp3 --midi
 ```
 
 ## Classical Music

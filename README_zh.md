@@ -139,8 +139,8 @@ MusicXML 可导入 [MuseScore](https://musescore.org)（免费）直接查看编
 
 ```bash
 ./build.sh
-# 产物：dist/transcribe/transcribe
-# 使用：dist/transcribe/transcribe song.mp3 --midi
+# 产物：dist/stemscore/stemscore
+# 使用：dist/stemscore/stemscore song.mp3 --midi
 ```
 
 ## 古典音乐
