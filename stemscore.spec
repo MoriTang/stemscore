@@ -2,12 +2,26 @@
 """PyInstaller spec for transcription pipeline — onedir."""
 
 import os
+import site
 from pathlib import Path
 
 ROOT = Path(SPECPATH)
 
+# Locate demucs remote/ directory (PyInstaller doesn't auto-collect data files)
+_demucs_remote_dir = None
+for _sp in site.getsitepackages():
+    _candidate = Path(_sp) / "demucs" / "remote"
+    if _candidate.is_dir():
+        _demucs_remote_dir = _candidate
+        break
+
 checkpoint = ROOT / "note_F1=0.9677_pedal_F1=0.9186.pth"
 datas = []
+if _demucs_remote_dir:
+    # Bundle all files from demucs/remote/ individually
+    for _f in _demucs_remote_dir.iterdir():
+        if _f.is_file():
+            datas.append((str(_f), "demucs/remote"))
 if checkpoint.exists():
     datas.append((str(checkpoint), "."))
 
@@ -23,6 +37,8 @@ a = Analysis(
     datas=datas,
     hiddenimports=[
         "torch", "torch._C", "torch.utils", "torch.serialization",
+        "torch.cuda", "torch.cuda._utils",
+        "torch.distributed",
         "torchaudio",
         "demucs", "demucs.apply", "demucs.pretrained", "demucs.audio",
         "demucs.htdemucs", "demucs.hdemucs", "demucs.states",
@@ -46,7 +62,7 @@ a = Analysis(
     hookspath=[],
     runtime_hooks=[],
     excludes=[
-        "torch.cuda", "torch.distributed", "torchvision",
+        "torchvision",
         "matplotlib.tests", "numpy.tests", "PIL.ImageQt",
     ],
 )

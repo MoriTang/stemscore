@@ -39,9 +39,16 @@ def separate_audio(
     import soundfile as sf
 
     print(f"[分离] 加载 Demucs 模型 '{model_name}' ...")
-    model = get_model(name=model_name)
+    print("[分离] （首次运行将自动下载，约 80 MB，请耐心等待...）")
+    try:
+        model = get_model(name=model_name)
+    except Exception as e:
+        print(f"[分离] ✗ 模型加载失败: {e}")
+        print("[分离] 提示：检查网络连接，模型需要从 torch hub 下载")
+        raise
     model.cpu()
     model.eval()
+    print("[分离] ✓ 模型就绪")
 
     if solo_stem is not None and solo_stem not in model.sources:
         raise ValueError(
@@ -173,7 +180,18 @@ def transcribe_stems(
     midi_dir.mkdir(parents=True, exist_ok=True)
 
     # Use CPU (MPS/GPU would need additional config)
-    transcriptor = PianoTranscription(device="cpu", checkpoint_path=checkpoint_path)
+    print(f"[转写] 加载转录模型...")
+    if checkpoint_path:
+        print(f"[转写] 检查点: {checkpoint_path}")
+    else:
+        print("[转写] （首次运行可能下载检查点，约 165 MB，请耐心等待...）")
+    try:
+        transcriptor = PianoTranscription(device="cpu", checkpoint_path=checkpoint_path)
+    except Exception as e:
+        print(f"[转写] ✗ 转录模型加载失败: {e}")
+        print("[转写] 提示：请先运行 python3 download_checkpoint.py 下载检查点文件")
+        raise
+    print("[转写] ✓ 转录模型就绪")
 
     midi_paths: list[Path] = []
     for stem_path in stem_paths:
@@ -446,6 +464,35 @@ def run_pipeline(
             if ckpt.exists():
                 checkpoint_path = str(ckpt)
                 break
+
+        # Fallback: download checkpoint with progress output
+        if checkpoint_path is None:
+            print("\n[检查点] 未找到检查点文件，开始下载...")
+            print("[检查点] 来源: Zenodo (约 165 MB)")
+            try:
+                import requests
+                url = "https://zenodo.org/record/4034264/files/CRNN_note_F1%3D0.9677_pedal_F1%3D0.9186.pth?download=1"
+                dst = workspace_ckpt
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                r = requests.get(url, stream=True, timeout=120)
+                r.raise_for_status()
+                total = int(r.headers.get("content-length", 0))
+                downloaded = 0
+                mode = "wb"
+                for chunk in r.iter_content(chunk_size=65536):
+                    with open(dst, mode) as f:
+                        f.write(chunk)
+                    mode = "ab"
+                    downloaded += len(chunk)
+                    if total:
+                        pct = downloaded * 100 // total
+                        print(f"\r[检查点] 下载中... {pct}% ({downloaded//1048576}/{total//1048576} MB)", end="", flush=True)
+                print(f"\n[检查点] ✓ 下载完成: {dst}")
+                checkpoint_path = str(dst)
+            except Exception as e:
+                print(f"\n[检查点] ✗ 下载失败: {e}")
+                print("[检查点] 请手动运行: python3 download_checkpoint.py")
+                raise RuntimeError(f"无法获取检查点文件，请先运行 download_checkpoint.py") from e
 
     # ── Step 1: Source separation ──
     stem_dir = output_dir / "stems"

@@ -25,6 +25,26 @@ python3 main.py song.mp3
 python3 main.py song.mp3 --midi
 ```
 
+## 首次运行：下载说明
+
+首次运行较慢，因为需要**一次性**下载并缓存以下依赖：
+
+| 下载内容 | 大小 | 触发时机 | 说明 |
+|----------|------|----------|------|
+| `pip install -r requirements.txt` | ~2 GB | 环境搭建 | 主要是 PyTorch（~1.5 GB）；每个虚拟环境仅需一次 |
+| 模型检查点 | ~165 MB | 首次执行 `python3 download_checkpoint.py` | piano-transcription 权重，存放在项目根目录 |
+| LilyPond | ~15 MB | 首次执行 `python3 download_lilypond.py` | 仅 PDF 输出需要；可选 |
+| Demucs 模型 | ~80 MB | 首次实际运行时 | 自动从 torch hub 下载至 `~/.cache/torch/` |
+| basic-pitch 模型 | ~30 MB | 首次转录时 | 首次 `--midi` 运行时自动下载 |
+
+**实际情况**：全新环境（新建 venv，无缓存）首次启动需 5–15 分钟，取决于网络速度。之后所有文件已缓存，后续运行只需几秒到几分钟（取决于音频长度）。
+
+可以提前运行模型检查点和 LilyPond 下载脚本：
+```bash
+python3 download_checkpoint.py   # 预下载模型检查点
+python3 download_lilypond.py     # 预下载 LilyPond（可选）
+```
+
 ## 使用方式
 
 ```bash

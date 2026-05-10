@@ -25,6 +25,26 @@ python3 main.py song.mp3
 python3 main.py song.mp3 --midi
 ```
 
+## First Run: Downloads
+
+The first run is slow because several dependencies are downloaded **once** and cached:
+
+| Download | Size | When | Notes |
+|----------|------|------|-------|
+| `pip install -r requirements.txt` | ~2 GB | Setup | Mostly PyTorch (~1.5 GB); one-time per venv |
+| Model checkpoint | ~165 MB | First `python3 download_checkpoint.py` | piano-transcription weights, stored in project root |
+| LilyPond | ~15 MB | First `python3 download_lilypond.py` | Only needed for PDF output; optional |
+| Demucs model | ~80 MB | First actual run | Auto-downloaded from torch hub to `~/.cache/torch/` |
+| basic-pitch model | ~30 MB | First transcription | Auto-downloaded on first `--midi` run |
+
+**In practice**: a cold start (fresh venv, no cache) takes 5–15 minutes depending on network. After that, all downloads are cached and subsequent runs complete in seconds to minutes (depending on audio length).
+
+The model checkpoint and LilyPond download scripts can be run ahead of time:
+```bash
+python3 download_checkpoint.py   # Pre-download checkpoint
+python3 download_lilypond.py     # Pre-download LilyPond (optional)
+```
+
 ## Usage
 
 ```bash

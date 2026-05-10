@@ -142,6 +142,24 @@ def main():
     print(f"保留 MIDI: {'是' if args.midi else '否 (仅分离音轨)'}")
     print()
 
+    # First-run notice: check which models need downloading
+    _ckpt = Path(args.checkpoint) if args.checkpoint else (
+        Path(__file__).parent / "note_F1=0.9677_pedal_F1=0.9186.pth")
+    _lily = (Path(__file__).parent / "lilypond" / "bin" / "lilypond")
+    print("—" * 50)
+    print("首次运行提示：")
+    print(f"  • Demucs 模型: 首次加载时将自动下载 (~80 MB)")
+    if _ckpt.exists():
+        print(f"  • 转录检查点: ✓ 已就绪")
+    elif not args.skip_transcribe and args.midi:
+        print(f"  • 转录检查点: 未找到，将自动下载 (~165 MB)")
+    if _lily.exists():
+        print(f"  • LilyPond: ✓ 已就绪")
+    elif not args.no_pdf and args.midi:
+        print(f"  • LilyPond: 未找到，PDF 将跳过（仅生成 MusicXML）")
+    print("—" * 50)
+    print()
+
     result = run_pipeline(
         audio_path=audio_path,
         output_dir=Path(args.output),

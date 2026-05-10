@@ -32,6 +32,15 @@ def is_installed() -> bool:
     return lily_bin.exists() and os.access(lily_bin, os.X_OK)
 
 
+def _download_progress(block_num, block_size, total_size):
+    """Progress reporthook for urlretrieve."""
+    if total_size > 0:
+        downloaded = block_num * block_size
+        pct = min(int(downloaded * 100 / total_size), 100)
+        print(f"\r  下载中... {pct}% ({downloaded//1048576}/{total_size//1048576} MB)",
+              end="", flush=True)
+
+
 def download():
     """Download and extract LilyPond."""
     if is_installed():
@@ -44,9 +53,9 @@ def download():
     tar_path = TARGET_DIR.parent / f"lilypond-{LILYPOND_VERSION}.tar.gz"
 
     try:
-        # Download
-        urllib.request.urlretrieve(LILYPOND_URL, tar_path)
-        print(f"  Downloaded to {tar_path}")
+        # Download with progress
+        urllib.request.urlretrieve(LILYPOND_URL, tar_path, reporthook=_download_progress)
+        print(f"\n  Downloaded to {tar_path}")
 
         # Extract
         print("  Extracting...")

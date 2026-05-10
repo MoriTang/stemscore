@@ -1,6 +1,10 @@
 #!/bin/bash
-# Build standalone executable for transcription pipeline
-# Output: dist/stemscore/stemscore  (~1 GB onedir, includes checkpoint)
+# Build standalone executable for StemScore pipeline
+# Output: dist/stemscore/stemscore  (~1.2 GB onedir, includes checkpoint)
+#
+# Usage:
+#   ./build.sh          # Incremental build (keeps Analysis cache, ~30s)
+#   ./build.sh --clean  # Full rebuild (~3-4 min)
 #
 # Requires: venv with all dependencies installed
 
@@ -9,7 +13,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Ensure checkpoint exists (needed for build — bundled into executable)
+CLEAN=false
+if [[ "${1:-}" == "--clean" ]]; then
+    CLEAN=true
+fi
+
+# Ensure checkpoint exists
 if [ ! -f "note_F1=0.9677_pedal_F1=0.9186.pth" ]; then
     echo "Downloading checkpoint..."
     source venv/bin/activate
@@ -17,14 +26,19 @@ if [ ! -f "note_F1=0.9677_pedal_F1=0.9186.pth" ]; then
 fi
 
 # Build with PyInstaller
-# PYINSTALLER_CONFIG_DIR redirects cache to /tmp to avoid macOS sandbox issues
 source venv/bin/activate
-rm -rf build dist
-mkdir -p /tmp/pyinstaller_config
 
-echo "Building executable..."
+if $CLEAN; then
+    echo "Clean build (full)..."
+    rm -rf build dist
+else
+    echo "Incremental build (keeping Analysis cache)..."
+    rm -rf dist
+fi
+
+mkdir -p /tmp/pyinstaller_config
 PYINSTALLER_CONFIG_DIR=/tmp/pyinstaller_config \
-    pyinstaller stemscore.spec --noconfirm
+    python3 -m PyInstaller stemscore.spec --noconfirm
 
 echo ""
 echo "✓ Build complete: dist/stemscore/stemscore"
