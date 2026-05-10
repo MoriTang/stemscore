@@ -16,8 +16,6 @@ note_F1=*.pth
 
 # User output directories
 output/
-cheers/
-干杯/
 
 # LilyPond (optional, downloaded separately)
 lilypond/
