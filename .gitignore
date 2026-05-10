@@ -19,6 +19,9 @@ output/
 cheers/
 干杯/
 
+# LilyPond (optional, downloaded separately)
+lilypond/
+
 # System files
 .DS_Store
 Thumbs.db
@@ -41,9 +44,3 @@ Thumbs.db
 
 # DeepSeek internal
 .deepseek/
-
-# Temp
-/tmp/
-lilypond/lib/python3.14/
-lilypond/lib/python3.14/site-packages/
-lilypond/
