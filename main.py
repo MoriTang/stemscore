@@ -32,6 +32,16 @@ import sys
 import textwrap
 from pathlib import Path
 
+# ── Early startup banner (before heavy imports) ──
+# PyInstaller builds may take 10-30s on first launch due to
+# macOS Gatekeeper verifying bundled .dylib/.so files.
+_start_ts = None
+if "PYINSTALLER" in os.environ or getattr(sys, "frozen", False):
+    _start_ts = __import__("time").time()
+    print("StemScore 启动中...")
+    print("（首次运行需验证组件，约 10-30 秒，后续启动可秒开）")
+    sys.stdout.flush()
+
 # Fix SSL certificate issues on macOS with misconfigured cert chains
 try:
     import certifi
@@ -39,7 +49,9 @@ try:
 except ImportError:
     pass
 
-from engine import run_pipeline
+# Heavy imports deferred to main() so the startup banner
+# above is visible during the initial loading phase.
+# from engine import run_pipeline  ← moved to main()
 
 
 def main():
@@ -159,6 +171,14 @@ def main():
         print(f"  • LilyPond: 未找到，PDF 将跳过（仅生成 MusicXML）")
     print("—" * 50)
     print()
+
+    # Lazy heavy-import: engine pulls in torch, demucs, numpy, music21, etc.
+    print("[启动] 加载核心引擎...")
+    from engine import run_pipeline
+    if _start_ts is not None:
+        _elapsed = __import__("time").time() - _start_ts
+        print(f"[启动] ✓ 就绪 (耗时 {_elapsed:.1f}s)")
+    sys.stdout.flush()
 
     result = run_pipeline(
         audio_path=audio_path,

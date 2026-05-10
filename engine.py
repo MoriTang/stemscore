@@ -31,6 +31,8 @@ def separate_audio(
 
     Returns a list of paths to the separated stem WAV files.
     """
+    import sys
+    print("[分离] 导入依赖库 (numpy, torch, demucs, soundfile) ...", flush=True)
     import numpy as np
     import torch
     from demucs.apply import apply_model
@@ -174,6 +176,8 @@ def transcribe_stems(
     piano-transcription-inference is a PyTorch-based polyphonic transcription model
     from the same research group as Demucs. It handles polyphonic audio well.
     """
+    import sys as _sys
+    print("[转写] 导入转录依赖 (piano_transcription_inference, basic_pitch) ...", flush=True)
     from piano_transcription_inference import PianoTranscription, sample_rate, load_audio
 
     midi_dir = output_dir / "midi"
@@ -345,6 +349,8 @@ def render_sheet_music(
     
     Uses signal-based timeout per stem. Applies instrument-specific formatting.
     """
+    import sys as _sys
+    print("[乐谱] 导入 music21 (首次加载约 5-10 秒) ...", flush=True)
     from music21 import environment
     import signal as _signal
     import os as _os
