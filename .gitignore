@@ -1,0 +1,48 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# PyInstaller build artifacts
+build/
+dist/
+*.spec.bak
+
+# Checkpoint file (164 MB — download separately)
+note_F1=*.pth
+
+# User output directories
+output/
+cheers/
+干杯/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test audio files
+*.mp3
+*.wav
+*.flac
+*.ogg
+*.m4a
+
+# Music output (generated)
+*.mid
+*.musicxml
+*.pdf
+
+# DeepSeek internal
+.deepseek/
+
+# Temp
+/tmp/
+lilypond/lib/python3.14/
+lilypond/lib/python3.14/site-packages/

@@ -1,0 +1,14 @@
+# Audio source separation
+demucs>=4.0
+
+# Audio-to-MIDI transcription
+piano-transcription-inference>=0.0.6
+
+# Music notation & sheet music generation
+music21>=9.1
+
+# Audio handling
+soundfile>=0.12
+
+# Progress bars
+tqdm>=4.65
