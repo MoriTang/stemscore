@@ -12,3 +12,6 @@ soundfile>=0.12
 
 # Progress bars
 tqdm>=4.65
+
+# On-demand model downloads
+requests>=2.28

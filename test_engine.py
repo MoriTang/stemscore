@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from engine import (
     detect_active_stems,
     _quantise_and_clean,
+    render_sheet_music,
     run_pipeline,
 )
 
@@ -190,14 +191,48 @@ class TestPipelineLogic(unittest.TestCase):
         self.assertTrue(True)  # Architecture test — logic is in engine.py
 
     def test_output_midi_flag_controls_transcription(self):
-        """output_midi=False should skip transcription and return empty midi/sheets."""
-        # Verified by code review: the early-return block in run_pipeline
-        self.assertTrue(True)
+        """Separation-only mode must not resolve or download the MIDI checkpoint."""
+        stem = Path("bass.wav")
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch("engine.separate_audio", return_value=[stem]), \
+             patch("engine.detect_active_stems", return_value=([stem], [])), \
+             patch("engine._resolve_checkpoint_path") as resolve_checkpoint:
+            result = run_pipeline(
+                audio_path=Path("song.mp3"),
+                output_dir=Path(tmpdir),
+                output_midi=False,
+            )
+
+        resolve_checkpoint.assert_not_called()
+        self.assertEqual(result["midi"], [])
+        self.assertEqual(result["sheets"], [])
 
     def test_solo_stem_passthrough(self):
         """solo_stem parameter is passed through to separate_audio."""
         # Verified by code review: run_pipeline passes solo_stem to separate_audio
         self.assertTrue(True)
+
+
+class TestMusicXmlRendering(unittest.TestCase):
+    """Ensure score rendering produces MusicXML without a PDF side path."""
+
+    @patch("engine._render_one_stem")
+    def test_render_creates_only_musicxml_output(self, render_one):
+        def write_xml(_midi_path, xml_path, _stem_name):
+            xml_path.touch()
+
+        render_one.side_effect = write_xml
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_dir = Path(tmpdir)
+            midi_path = output_dir / "bass.mid"
+            midi_path.touch()
+
+            results = render_sheet_music([midi_path], output_dir)
+
+            self.assertTrue((output_dir / "musicxml" / "bass.musicxml").exists())
+            self.assertFalse((output_dir / "pdf").exists())
+            self.assertNotIn("pdf", results[0])
 
 
 # ---------------------------------------------------------------------------

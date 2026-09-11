@@ -5,8 +5,10 @@ Core processing engine: source separation, transcription, sheet music rendering.
 Pipeline:
   1. Demucs HTDemucs 4-source separation → stems (WAV)
   2. basic-pitch polyphonic transcription → MIDI per stem
-  3. music21 → MusicXML + PDF sheet music per stem
+  3. music21 → MusicXML sheet music per stem
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
@@ -216,7 +218,7 @@ def transcribe_stems(
 
 
 # ---------------------------------------------------------------------------
-# 3. MIDI → sheet music (MusicXML + PDF)
+# 3. MIDI → sheet music (MusicXML)
 # ---------------------------------------------------------------------------
 
 def _quantise_and_clean(score):
@@ -319,53 +321,33 @@ def _format_by_instrument(score, stem_name: str):
     return score
 
 
-def _render_one_stem(midi_path: Path, xml_path: Path, pdf_path: Path | None,
-                     lily_bin: str | None, stem_name: str = "other"):
-    """Render a single stem in-process. Called with signal timeout from render_sheet_music."""
-    from music21 import converter, environment
-    import os as _os
-
-    if lily_bin:
-        env = environment.Environment()
-        env["lilypondPath"] = lily_bin
-        _os.environ["PATH"] = str(Path(lily_bin).parent) + _os.pathsep + _os.environ.get("PATH", "")
+def _render_one_stem(midi_path: Path, xml_path: Path,
+                     stem_name: str = "other"):
+    """Render a single stem to MusicXML in-process."""
+    from music21 import converter
 
     score = converter.parse(str(midi_path))
     score = _format_by_instrument(score, stem_name)
     score = _quantise_and_clean(score)
     score.write("musicxml", str(xml_path))
-    if pdf_path is not None:
-        score.write("lily.pdf", str(pdf_path.with_suffix("")))
 
 
 def render_sheet_music(
     midi_paths: list[Path],
     output_dir: Path,
     *,
-    make_pdf: bool = True,
     timeout: int = 30,
 ) -> list[dict]:
-    """Convert each MIDI file to MusicXML + optionally PDF.
+    """Convert each MIDI file to MusicXML.
     
     Uses signal-based timeout per stem. Applies instrument-specific formatting.
     """
     import sys as _sys
     print("[乐谱] 导入 music21 (首次加载约 5-10 秒) ...", flush=True)
-    from music21 import environment
     import signal as _signal
-    import os as _os
-
-    _lily_bin = Path(__file__).resolve().parent / "lilypond" / "bin" / "lilypond"
-    lily_bin_str = str(_lily_bin) if _lily_bin.exists() else None
-    if lily_bin_str:
-        env = environment.Environment()
-        env["lilypondPath"] = lily_bin_str
-        _os.environ["PATH"] = str(_lily_bin.parent) + _os.pathsep + _os.environ.get("PATH", "")
 
     xml_dir = output_dir / "musicxml"
     xml_dir.mkdir(parents=True, exist_ok=True)
-    pdf_dir = output_dir / "pdf"
-    pdf_dir.mkdir(parents=True, exist_ok=True)
 
     results: list[dict] = []
 
@@ -377,19 +359,15 @@ def render_sheet_music(
         print(f"[制谱] {name} ...")
 
         xml_path = xml_dir / f"{name}.musicxml"
-        pdf_path = pdf_dir / f"{name}.pdf" if make_pdf else None
-
         def _handler(signum, frame):
             raise Timeout()
 
         old_handler = _signal.signal(_signal.SIGALRM, _handler)
         _signal.alarm(timeout)
         try:
-            _render_one_stem(midi_path, xml_path, pdf_path, lily_bin_str, name)
+            _render_one_stem(midi_path, xml_path, name)
             _signal.alarm(0)
             print(f"  \u2713 {name}.musicxml")
-            if make_pdf and pdf_path and pdf_path.exists():
-                print(f"  \u2713 {name}.pdf")
         except Timeout:
             print(f"  \u26a0\ufe0f {name} 制谱超时 ({timeout}s)")
             _signal.alarm(0)  # already raised, just cleanup
@@ -409,14 +387,14 @@ def render_sheet_music(
             except Exception as e:
                 print(f"  \u2717 {name} 简化制谱失败: {e}")
                 results.append({"name": name, "midi": midi_path,
-                               "musicxml": None, "pdf": None})
+                               "musicxml": None})
                 _signal.signal(_signal.SIGALRM, old_handler)
                 continue
         except Exception as e:
             _signal.alarm(0)
             print(f"  \u2717 {name} 制谱失败: {e}")
             results.append({"name": name, "midi": midi_path,
-                           "musicxml": None, "pdf": None})
+                           "musicxml": None})
             _signal.signal(_signal.SIGALRM, old_handler)
             continue
         finally:
@@ -426,10 +404,57 @@ def render_sheet_music(
             "name": name,
             "midi": midi_path,
             "musicxml": xml_path if xml_path.exists() else None,
-            "pdf": pdf_path if (pdf_path and pdf_path.exists()) else None,
         })
 
     return results
+
+
+def _resolve_checkpoint_path(checkpoint_path: str | None) -> str:
+    """Find or download the transcription checkpoint when transcription is needed."""
+    if checkpoint_path is not None:
+        return checkpoint_path
+
+    import sys
+
+    filename = "note_F1=0.9677_pedal_F1=0.9186.pth"
+    default_ckpt = Path.home() / "piano_transcription_inference_data" / filename
+    workspace_ckpt = Path(__file__).parent / filename
+    meipass_ckpt = Path(getattr(sys, "_MEIPASS", "")) / filename
+    for ckpt in (default_ckpt, workspace_ckpt, meipass_ckpt):
+        if ckpt.exists():
+            return str(ckpt)
+
+    print("\n[检查点] 未找到检查点文件，开始下载...")
+    print("[检查点] 来源: Zenodo (约 165 MB)")
+    try:
+        import requests
+
+        url = "https://zenodo.org/record/4034264/files/CRNN_note_F1%3D0.9677_pedal_F1%3D0.9186.pth?download=1"
+        workspace_ckpt.parent.mkdir(parents=True, exist_ok=True)
+        response = requests.get(url, stream=True, timeout=120)
+        response.raise_for_status()
+        total = int(response.headers.get("content-length", 0))
+        downloaded = 0
+        with open(workspace_ckpt, "wb") as checkpoint_file:
+            for chunk in response.iter_content(chunk_size=65536):
+                checkpoint_file.write(chunk)
+                downloaded += len(chunk)
+                if total:
+                    pct = downloaded * 100 // total
+                    print(
+                        f"\r[检查点] 下载中... {pct}% "
+                        f"({downloaded//1048576}/{total//1048576} MB)",
+                        end="",
+                        flush=True,
+                    )
+        print(f"\n[检查点] ✓ 下载完成: {workspace_ckpt}")
+        return str(workspace_ckpt)
+    except Exception as exc:
+        workspace_ckpt.unlink(missing_ok=True)
+        print(f"\n[检查点] ✗ 下载失败: {exc}")
+        print("[检查点] 请手动运行: python3 download_checkpoint.py")
+        raise RuntimeError("无法获取检查点文件，请先运行 download_checkpoint.py") from exc
+
 
 def run_pipeline(
     audio_path: Path,
@@ -439,7 +464,6 @@ def run_pipeline(
     onset_threshold: float = 0.5,
     frame_threshold: float = 0.3,
     minimum_note_length: float = 58.0,
-    skip_pdf: bool = False,
     skip_separation: bool = False,
     skip_transcribe: bool = False,
     checkpoint_path: str | None = None,
@@ -459,46 +483,6 @@ def run_pipeline(
     Returns a summary dict with all output paths.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    # ── Resolve checkpoint path ──
-    if checkpoint_path is None:
-        import sys
-        default_ckpt = Path.home() / "piano_transcription_inference_data" / "note_F1=0.9677_pedal_F1=0.9186.pth"
-        workspace_ckpt = Path(__file__).parent / "note_F1=0.9677_pedal_F1=0.9186.pth"
-        meipass_ckpt = Path(getattr(sys, "_MEIPASS", "")) / "note_F1=0.9677_pedal_F1=0.9186.pth"
-        for ckpt in (default_ckpt, workspace_ckpt, meipass_ckpt):
-            if ckpt.exists():
-                checkpoint_path = str(ckpt)
-                break
-
-        # Fallback: download checkpoint with progress output
-        if checkpoint_path is None:
-            print("\n[检查点] 未找到检查点文件，开始下载...")
-            print("[检查点] 来源: Zenodo (约 165 MB)")
-            try:
-                import requests
-                url = "https://zenodo.org/record/4034264/files/CRNN_note_F1%3D0.9677_pedal_F1%3D0.9186.pth?download=1"
-                dst = workspace_ckpt
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                r = requests.get(url, stream=True, timeout=120)
-                r.raise_for_status()
-                total = int(r.headers.get("content-length", 0))
-                downloaded = 0
-                mode = "wb"
-                for chunk in r.iter_content(chunk_size=65536):
-                    with open(dst, mode) as f:
-                        f.write(chunk)
-                    mode = "ab"
-                    downloaded += len(chunk)
-                    if total:
-                        pct = downloaded * 100 // total
-                        print(f"\r[检查点] 下载中... {pct}% ({downloaded//1048576}/{total//1048576} MB)", end="", flush=True)
-                print(f"\n[检查点] ✓ 下载完成: {dst}")
-                checkpoint_path = str(dst)
-            except Exception as e:
-                print(f"\n[检查点] ✗ 下载失败: {e}")
-                print("[检查点] 请手动运行: python3 download_checkpoint.py")
-                raise RuntimeError(f"无法获取检查点文件，请先运行 download_checkpoint.py") from e
 
     # ── Step 1: Source separation ──
     stem_dir = output_dir / "stems"
@@ -554,6 +538,7 @@ def run_pipeline(
         midi_paths = sorted((output_dir / "midi").glob("*.mid"))
         print(f"[转写] 跳过, 使用已有 midi/ 目录 ({len(midi_paths)} 个文件)")
     else:
+        checkpoint_path = _resolve_checkpoint_path(checkpoint_path)
         print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print(" 步骤 2/3: 音频转 MIDI")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -569,7 +554,7 @@ def run_pipeline(
     print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print(" 步骤 3/3: 生成乐谱 (music21)")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    sheets = render_sheet_music(midi_paths, output_dir, make_pdf=not skip_pdf)
+    sheets = render_sheet_music(midi_paths, output_dir)
 
     return {
         "stems": stem_paths,

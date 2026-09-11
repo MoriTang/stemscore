@@ -8,7 +8,7 @@ Usage:
 
 Example:
     python main.py orchestra.mp3 -o ./output
-    python main.py quartet.wav --no-pdf --model htdemucs_ft
+    python main.py quartet.wav --model htdemucs_ft
 
 Output structure:
     <output_dir>/
@@ -20,10 +20,8 @@ Output structure:
     ├── midi/           # 各轨的 MIDI 文件
     │   ├── drums.mid
     │   └── ...
-    ├── musicxml/       # MusicXML 乐谱 (可导入 MuseScore 等)
+    └── musicxml/       # MusicXML 乐谱 (可导入 MuseScore 等)
     │   └── ...
-    └── pdf/            # PDF 五线谱 (需要 Lilypond 或 MuseScore)
-        └── ...
 """
 
 import argparse
@@ -56,7 +54,7 @@ except ImportError:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="从音频文件中分离乐器并生成分谱 (PDF + MIDI)",
+        description="从音频文件中分离乐器并生成分谱 (MIDI + MusicXML)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
         DEMUCS 模型选择:
@@ -67,8 +65,7 @@ def main():
 
         输出说明:
           - 默认仅分离音轨: stems/ (WAV), 不转录不制谱
-          - 使用 --midi 开启转录和制谱: + midi/ + musicxml/ + pdf/
-          - 使用 --no-pdf 可跳过 PDF 生成
+          - 使用 --midi 开启转录和制谱: + midi/ + musicxml/
           - 使用 --solo <声部> 可仅提取指定声部, 其余合并为 other.wav
 
         单轨提取示例:
@@ -77,8 +74,9 @@ def main():
           python main.py song.mp3 --solo drums     # 鼓 + 其余
 
         注意事项:
-          - 首次运行会下载模型 (~350MB), 请确保网络畅通
-          - PDF 生成需要安装 Lilypond (https://lilypond.org) 或 MuseScore
+          - 首次分轨需下载 Demucs (~80 MB)
+          - 使用 --midi 转录时另需检查点 (~165 MB)
+          - MusicXML 可导入 MuseScore 等软件继续编辑
           - 古典管弦乐的分离精度受限于模型训练数据, 主要集中在流行/摇滚乐器
         """),
     )
@@ -126,10 +124,6 @@ def main():
         help="静音检测阈值 RMS (默认: 0.001 ≈ -60dBFS, 低于此值跳过)",
     )
     parser.add_argument(
-        "--no-pdf", action="store_true",
-        help="跳过 PDF 生成, 只输出 MIDI 和 MusicXML",
-    )
-    parser.add_argument(
         "--skip-separation", action="store_true",
         help="跳过分音频离, 使用已有 stems/ 目录",
     )
@@ -148,27 +142,29 @@ def main():
     print(f"输入文件: {audio_path}")
     print(f"输出目录: {args.output}")
     print(f"分离模型: {args.model}")
-    print(f"生成 PDF: {'否' if args.no_pdf else '是'}")
     print(f"跳过分离: {'是' if args.skip_separation else '否'}")
     print(f"跳过转写: {'是' if args.skip_transcribe else '否'}")
     print(f"保留 MIDI: {'是' if args.midi else '否 (仅分离音轨)'}")
     print()
 
     # First-run notice: check which models need downloading
-    _ckpt = Path(args.checkpoint) if args.checkpoint else (
-        Path(__file__).parent / "note_F1=0.9677_pedal_F1=0.9186.pth")
-    _lily = (Path(__file__).parent / "lilypond" / "bin" / "lilypond")
+    _ckpt_name = "note_F1=0.9677_pedal_F1=0.9186.pth"
+    _ckpt_candidates = (
+        [Path(args.checkpoint)] if args.checkpoint else [
+            Path.home() / "piano_transcription_inference_data" / _ckpt_name,
+            Path(__file__).parent / _ckpt_name,
+        ]
+    )
+    _ckpt_ready = any(path.exists() for path in _ckpt_candidates)
     print("—" * 50)
     print("首次运行提示：")
     print(f"  • Demucs 模型: 首次加载时将自动下载 (~80 MB)")
-    if _ckpt.exists():
+    if _ckpt_ready:
         print(f"  • 转录检查点: ✓ 已就绪")
     elif not args.skip_transcribe and args.midi:
         print(f"  • 转录检查点: 未找到，将自动下载 (~165 MB)")
-    if _lily.exists():
-        print(f"  • LilyPond: ✓ 已就绪")
-    elif not args.no_pdf and args.midi:
-        print(f"  • LilyPond: 未找到，PDF 将跳过（仅生成 MusicXML）")
+    elif not args.midi:
+        print(f"  • 转录检查点: 不需要（未启用 --midi）")
     print("—" * 50)
     print()
 
@@ -187,7 +183,6 @@ def main():
         onset_threshold=args.onset_threshold,
         frame_threshold=args.frame_threshold,
         minimum_note_length=args.min_note_length,
-        skip_pdf=args.no_pdf,
         skip_separation=args.skip_separation,
         skip_transcribe=args.skip_transcribe,
         checkpoint_path=args.checkpoint,
@@ -212,10 +207,10 @@ def main():
         print(f"\nMIDI 文件: 未生成 (使用 --midi 开启)")
 
     if result["sheets"]:
-        print(f"\n乐谱文件:")
+        print(f"\nMusicXML 乐谱:")
         for s in result["sheets"]:
-            pdf_status = "✓" if s["pdf"] else "✗ (未生成)"
-            print(f"  • {s['name']}:  MusicXML={s['musicxml'].name}  PDF={pdf_status}")
+            xml_status = s["musicxml"].name if s["musicxml"] else "✗ (未生成)"
+            print(f"  • {s['name']}: {xml_status}")
     elif not result["midi"]:
         print(f"\n使用 --midi 可开启转录和制谱")
 

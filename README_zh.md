@@ -3,7 +3,7 @@
 从音频文件自动分离乐器、转录 MIDI、生成分谱。
 
 ```
-一首歌 → 4~6 轨 WAV → MIDI → MusicXML + PDF 乐谱
+一首歌 → 4~6 轨 WAV → MIDI → MusicXML 乐谱
 ```
 
 ## 快速开始
@@ -15,7 +15,7 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# 下载模型检查点（~165 MB，首次必需）
+# 仅 --midi 需要：预下载转录检查点（~165 MB）
 python3 download_checkpoint.py
 
 # 仅分离音轨（默认）
@@ -32,17 +32,14 @@ python3 main.py song.mp3 --midi
 | 下载内容 | 大小 | 触发时机 | 说明 |
 |----------|------|----------|------|
 | `pip install -r requirements.txt` | ~2 GB | 环境搭建 | 主要是 PyTorch（~1.5 GB）；每个虚拟环境仅需一次 |
-| 模型检查点 | ~165 MB | 首次执行 `python3 download_checkpoint.py` | piano-transcription 权重，存放在项目根目录 |
-| LilyPond | ~15 MB | 首次执行 `python3 download_lilypond.py` | 仅 PDF 输出需要；可选 |
 | Demucs 模型 | ~80 MB | 首次实际运行时 | 自动从 torch hub 下载至 `~/.cache/torch/` |
-| basic-pitch 模型 | ~30 MB | 首次转录时 | 首次 `--midi` 运行时自动下载 |
+| 转录检查点 | ~165 MB | 首次使用 `--midi` 且需要转录时 | piano-transcription 权重，按需自动下载 |
 
 **实际情况**：全新环境（新建 venv，无缓存）首次启动需 5–15 分钟，取决于网络速度。之后所有文件已缓存，后续运行只需几秒到几分钟（取决于音频长度）。
 
-可以提前运行模型检查点和 LilyPond 下载脚本：
+如果需要 MIDI，可以提前下载转录检查点：
 ```bash
 python3 download_checkpoint.py   # 预下载模型检查点
-python3 download_lilypond.py     # 预下载 LilyPond（可选）
 ```
 
 ## 使用方式
@@ -56,7 +53,6 @@ python3 main.py <音频文件> [选项]
 | `-o DIR` | 输出目录（默认 `./output`） |
 | `-m MODEL` | 分离模型（默认 `htdemucs`） |
 | `--midi` | 开启转录和制谱 |
-| `--no-pdf` | 跳过 PDF，只输出 MusicXML |
 | `--fast` | 快速模式，分离约 2x 加速 |
 | `--solo STEM` | 仅提取指定声部，其余合并 |
 | `--skip-separation` | 跳过分离，使用已有 stems/ |
@@ -96,8 +92,7 @@ output/
 │   ├── other.wav
 │   └── vocals.wav
 ├── midi/           # MIDI 文件（需 --midi）
-├── musicxml/       # MusicXML 乐谱（需 --midi）
-└── pdf/            # PDF 乐谱（需 --midi + LilyPond）
+└── musicxml/       # MusicXML 乐谱（需 --midi）
 ```
 
 ## 模型选择
@@ -120,18 +115,6 @@ output/
 | guitar | 低八度高音谱号 | 单行 |
 | piano | 大谱表 | 高低音双行 |
 | vocals | 高音谱号 | 单行 |
-
-## 可选：PDF 生成
-
-PDF 需要 LilyPond。不装也能用——只影响 PDF，MusicXML 正常产出。
-
-```bash
-# 下载 LilyPond（~15 MB，一次性）
-python3 download_lilypond.py
-
-# 或用 brew（macOS）
-brew install lilypond
-```
 
 MusicXML 可导入 [MuseScore](https://musescore.org)（免费）直接查看编辑。
 

@@ -3,7 +3,7 @@
 Automatic music source separation, MIDI transcription, and sheet music generation.
 
 ```
-song → 4~6 stems (WAV) → MIDI → MusicXML + PDF scores
+song → 4~6 stems (WAV) → MIDI → MusicXML scores
 ```
 
 ## Quick Start
@@ -15,7 +15,7 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# Download model checkpoint (~165 MB, first time only)
+# Only needed for --midi: pre-download transcription checkpoint (~165 MB)
 python3 download_checkpoint.py
 
 # Separate stems only (default)
@@ -32,17 +32,14 @@ The first run is slow because several dependencies are downloaded **once** and c
 | Download | Size | When | Notes |
 |----------|------|------|-------|
 | `pip install -r requirements.txt` | ~2 GB | Setup | Mostly PyTorch (~1.5 GB); one-time per venv |
-| Model checkpoint | ~165 MB | First `python3 download_checkpoint.py` | piano-transcription weights, stored in project root |
-| LilyPond | ~15 MB | First `python3 download_lilypond.py` | Only needed for PDF output; optional |
 | Demucs model | ~80 MB | First actual run | Auto-downloaded from torch hub to `~/.cache/torch/` |
-| basic-pitch model | ~30 MB | First transcription | Auto-downloaded on first `--midi` run |
+| Transcription checkpoint | ~165 MB | First `--midi` run that performs transcription | piano-transcription weights, downloaded on demand |
 
 **In practice**: a cold start (fresh venv, no cache) takes 5–15 minutes depending on network. After that, all downloads are cached and subsequent runs complete in seconds to minutes (depending on audio length).
 
-The model checkpoint and LilyPond download scripts can be run ahead of time:
+If MIDI output is needed, the transcription checkpoint can be downloaded ahead of time:
 ```bash
 python3 download_checkpoint.py   # Pre-download checkpoint
-python3 download_lilypond.py     # Pre-download LilyPond (optional)
 ```
 
 ## Usage
@@ -56,7 +53,6 @@ python3 main.py <audio_file> [options]
 | `-o DIR` | Output directory (default: `./output`) |
 | `-m MODEL` | Separation model (default: `htdemucs`) |
 | `--midi` | Enable transcription and sheet music |
-| `--no-pdf` | Skip PDF, output MusicXML only |
 | `--fast` | Fast mode: ~2x separation speed (slightly lower quality) |
 | `--solo STEM` | Extract a single stem, merge rest into other.wav |
 | `--skip-separation` | Skip separation, use existing stems/ |
@@ -96,8 +92,7 @@ output/
 │   ├── other.wav
 │   └── vocals.wav
 ├── midi/           # MIDI files (requires --midi)
-├── musicxml/       # MusicXML scores (requires --midi)
-└── pdf/            # PDF scores (requires --midi + LilyPond)
+└── musicxml/       # MusicXML scores (requires --midi)
 ```
 
 ## Models
@@ -120,18 +115,6 @@ Sheet music is automatically optimized per stem:
 | guitar | Treble 8vb clef | Single staff |
 | piano | Grand staff | Treble + bass |
 | vocals | Treble clef | Single staff |
-
-## Optional: PDF Generation
-
-PDF output requires LilyPond. Without it, MusicXML files are still generated normally.
-
-```bash
-# Download LilyPond (~15 MB, one-time)
-python3 download_lilypond.py
-
-# Or via Homebrew (macOS)
-brew install lilypond
-```
 
 MusicXML files can be opened directly in [MuseScore](https://musescore.org) (free).
 

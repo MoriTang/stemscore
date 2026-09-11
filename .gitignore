@@ -17,9 +17,6 @@ note_F1=*.pth
 # User output directories
 output/
 
-# LilyPond (optional, downloaded separately)
-lilypond/
-
 # System files
 .DS_Store
 Thumbs.db
@@ -38,7 +35,6 @@ Thumbs.db
 # Music output (generated)
 *.mid
 *.musicxml
-*.pdf
 
 # DeepSeek internal
 .deepseek/

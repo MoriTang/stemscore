@@ -25,11 +25,6 @@ if _demucs_remote_dir:
 if checkpoint.exists():
     datas.append((str(checkpoint), "."))
 
-# Bundle lilypond for PDF generation
-lily_dir = ROOT / "lilypond"
-if lily_dir.exists():
-    datas.append((str(lily_dir), "lilypond"))
-
 a = Analysis(
     ["main.py"],
     pathex=[str(ROOT)],
