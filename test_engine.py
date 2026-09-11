@@ -121,6 +121,7 @@ class TestQuantiseAndClean(unittest.TestCase):
     def _make_mock_score(self, notes):
         """Create a mock score that quacks like a music21 Stream."""
         class MockIterator:
+            @property
             def notesAndRests(self):
                 return notes
 
@@ -147,7 +148,7 @@ class TestQuantiseAndClean(unittest.TestCase):
 
     def test_rounds_up(self):
         """Values >= 0.375 should round up to 0.5."""
-        n = self._make_mock_note(0.37)
+        n = self._make_mock_note(0.375)
         score = self._make_mock_score([n])
         _quantise_and_clean(score)
         self.assertEqual(n.quarterLength, 0.5)
@@ -246,7 +247,7 @@ class TestInstrumentFormatting(unittest.TestCase):
     def setUpClass(cls):
         try:
             from engine import _format_by_instrument
-            cls._format_by_instrument = _format_by_instrument
+            cls._format_by_instrument = staticmethod(_format_by_instrument)
             import music21
             cls.music21 = music21
         except ImportError:
