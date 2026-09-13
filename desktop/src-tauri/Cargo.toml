@@ -1,8 +1,8 @@
 [package]
 name = "stemscore-desktop"
 version = "0.1.0"
-description = "Real-time system audio recording and stem separation for StemScore"
-authors = ["StemScore contributors"]
+description = "Local-file and real-time system-audio stem separation for StemFlow"
+authors = ["StemFlow contributors"]
 edition = "2021"
 
 [lib]

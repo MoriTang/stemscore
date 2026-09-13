@@ -409,5 +409,5 @@ pub fn run() {
             stop_live_capture,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running StemScore Live");
+        .expect("error while running StemFlow");
 }

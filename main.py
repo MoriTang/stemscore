@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-StemScore — 从音频文件自动生成多乐器分谱
+StemFlow — 本地音频分轨与可选 MIDI/MusicXML 转录
 
 Usage:
     python main.py <音频文件> [-o <输出目录>] [选项]
@@ -36,7 +36,7 @@ from pathlib import Path
 _start_ts = None
 if "PYINSTALLER" in os.environ or getattr(sys, "frozen", False):
     _start_ts = __import__("time").time()
-    print("StemScore 启动中...")
+    print("StemFlow 启动中...")
     print("（首次运行需验证组件，约 10-30 秒，后续启动可秒开）")
     sys.stdout.flush()
 

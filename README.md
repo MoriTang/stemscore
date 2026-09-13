@@ -1,67 +1,60 @@
-# StemScore
+# StemFlow
 
-Automatic music source separation, MIDI transcription, and sheet music generation.
+A local-first AI music stem separator for audio files and the stereo output currently playing on macOS.
 
-```
-song → 4~6 stems (WAV) → MIDI → MusicXML scores
-```
+> Formerly StemScore. The GitHub repository and product-facing name are now StemFlow. Local data directories retain the former name so existing model downloads and output access continue to work.
 
-## Quick Start
+## Features
 
-```bash
-git clone <repo>
-cd transcription
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+- **File separation:** import WAV, MP3, FLAC, M4A/AAC, or OGG and create drums, bass, other, and vocals WAV files.
+- **Live separation:** record the macOS default stereo output while running streaming ONNX inference.
+- **Live visualization:** rolling four-stem waveforms, an input meter, and a drum light driven by the separated drum envelope.
+- **Stem playback:** play, pause, and seek every completed stem after a file job or recording.
+- **Local processing:** audio is not uploaded, and the Rust audio path does not require Python or PyTorch.
 
-# Only needed for --midi: pre-download transcription checkpoint (~165 MB)
-python3 download_checkpoint.py
-
-# Separate stems only (default)
-python3 main.py song.mp3
-
-# Full pipeline: separate + transcribe + sheet music
-python3 main.py song.mp3 --midi
-```
-
-## First Run: Downloads
-
-The first run is slow because several dependencies are downloaded **once** and cached:
-
-| Download | Size | When | Notes |
-|----------|------|------|-------|
-| `pip install -r requirements.txt` | ~2 GB | Setup | Mostly PyTorch (~1.5 GB); one-time per venv |
-| Demucs model | ~80 MB | First actual run | Auto-downloaded from torch hub to `~/.cache/torch/` |
-| Transcription checkpoint | ~165 MB | First `--midi` run that performs transcription | piano-transcription weights, downloaded on demand |
-
-**In practice**: a cold start (fresh venv, no cache) takes 5–15 minutes depending on network. After that, all downloads are cached and subsequent runs complete in seconds to minutes (depending on audio length).
-
-If MIDI output is needed, the transcription checkpoint can be downloaded ahead of time:
-```bash
-python3 download_checkpoint.py   # Pre-download checkpoint
-```
-
-## Live Desktop App (macOS)
-
-The experimental Tauri 2 desktop app separates local audio files and can also
-record the default stereo system output while separating drums, bass, other,
-and vocals. It uses a Rust audio pipeline and a streaming ONNX model; Python
-and PyTorch are not required.
+## Desktop Quick Start
 
 ```bash
-cd desktop
+git clone https://github.com/MoriTang/stemflow.git
+cd stemflow/desktop
 npm install
 npm run dev
 ```
 
-It requires macOS 14.6 or newer. The first model-enabled recording downloads
-and verifies one ~106 MB model; later runs reuse the cached copy. Recordings are
-saved under `~/Music/StemScore Recordings/`; file results are saved under
-`~/Music/StemScore Separations/`. See [desktop/README.md](desktop/README.md) for
-details and current limitations.
+macOS 14.6 or newer can capture system output directly without a virtual audio driver. Development also requires Rust 1.88+, Node.js, npm, and Xcode Command Line Tools.
 
-## Usage
+The first separation downloads and verifies one approximately **106 MB** HS-TasNet ONNX model. File and live separation share the same cached model, so it is not downloaded again on later runs.
+
+```bash
+# Build the macOS app
+npm run build -- --bundles app
+```
+
+See [desktop/README.md](desktop/README.md) for detailed usage, output structure, and current limitations.
+
+## Data and Outputs
+
+| Content | Location |
+|---------|----------|
+| ONNX model cache | `~/Library/Application Support/com.MoriTang.StemScore/models/` |
+| Live recordings | `~/Music/StemScore Recordings/` |
+| File separation | `~/Music/StemScore Separations/` |
+
+These directories retain the former name for compatibility with existing models and outputs.
+
+## Python CLI (Retained for Compatibility)
+
+The Demucs command-line pipeline remains available for offline jobs where quality matters more than latency. Optional `--midi` processing creates MIDI and MusicXML; PDF score generation has been removed.
+
+```bash
+cd stemflow
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 main.py song.mp3
+```
+
+## Python CLI Usage
 
 ```bash
 python3 main.py <audio_file> [options]

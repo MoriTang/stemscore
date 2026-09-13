@@ -309,7 +309,7 @@ where
             move |error| error_status.set_error(format!("系统音频流错误：{error}")),
             None,
         )
-        .context("无法创建系统音频回环流；请在系统设置中允许 StemScore 录制系统音频")
+        .context("无法创建系统音频回环流；请在系统设置中允许 StemFlow 录制系统音频")
 }
 
 fn run_worker(

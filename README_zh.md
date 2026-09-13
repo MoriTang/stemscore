@@ -1,65 +1,60 @@
-# StemScore
+# StemFlow
 
-从音频文件自动分离乐器、转录 MIDI、生成分谱。
+本地优先的 AI 音乐分轨工具，支持音频文件分轨，也可以录制并实时分离 macOS 正在播放的立体声音频。
 
-```
-一首歌 → 4~6 轨 WAV → MIDI → MusicXML 乐谱
-```
+> 项目原名 StemScore。GitHub 仓库和产品展示名已更新为 StemFlow；为避免重新下载模型、丢失历史输出访问权限，本地数据目录仍保持不变。
 
-## 快速开始
+## 主要功能
 
-```bash
-git clone <repo>
-cd transcription
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+- **文件分轨**：导入 WAV、MP3、FLAC、M4A/AAC 或 OGG，生成鼓、贝斯、其他和人声四轨 WAV。
+- **实时分轨**：录制 macOS 默认输出设备的立体声混音，边录制边执行 ONNX 推理。
+- **实时可视化**：显示四轨滚动波形、输入电平和随鼓轨强度变化的呼吸灯。
+- **分轨试听**：文件处理或录制完成后，可分别播放、暂停和定位每条音轨。
+- **本地处理**：音频不上传，Rust 音频链路不依赖 Python 或 PyTorch。
 
-# 仅 --midi 需要：预下载转录检查点（~165 MB）
-python3 download_checkpoint.py
-
-# 仅分离音轨（默认）
-python3 main.py song.mp3
-
-# 分离 + 转录 + 乐谱
-python3 main.py song.mp3 --midi
-```
-
-## 首次运行：下载说明
-
-首次运行较慢，因为需要**一次性**下载并缓存以下依赖：
-
-| 下载内容 | 大小 | 触发时机 | 说明 |
-|----------|------|----------|------|
-| `pip install -r requirements.txt` | ~2 GB | 环境搭建 | 主要是 PyTorch（~1.5 GB）；每个虚拟环境仅需一次 |
-| Demucs 模型 | ~80 MB | 首次实际运行时 | 自动从 torch hub 下载至 `~/.cache/torch/` |
-| 转录检查点 | ~165 MB | 首次使用 `--midi` 且需要转录时 | piano-transcription 权重，按需自动下载 |
-
-**实际情况**：全新环境（新建 venv，无缓存）首次启动需 5–15 分钟，取决于网络速度。之后所有文件已缓存，后续运行只需几秒到几分钟（取决于音频长度）。
-
-如果需要 MIDI，可以提前下载转录检查点：
-```bash
-python3 download_checkpoint.py   # 预下载模型检查点
-```
-
-## 实时桌面版（macOS）
-
-实验性的 Tauri 2 桌面版既可以分离本地音频文件，也可以录制默认立体声系统输
-出，并在录音过程中实时分离鼓、贝斯、其他和人声。音频链路使用 Rust 和流式
-ONNX 模型，不依赖 Python 或 PyTorch。
+## 桌面版快速开始
 
 ```bash
-cd desktop
+git clone https://github.com/MoriTang/stemflow.git
+cd stemflow/desktop
 npm install
 npm run dev
 ```
 
-系统要求为 macOS 14.6 或更高版本。第一次启用实时分轨时会下载并校验一个约
-106 MB 的模型，后续直接复用缓存。录音保存在 `~/Music/StemScore Recordings/`，
-本地文件的分轨结果保存在 `~/Music/StemScore Separations/`。详细说明和当前限
-制见 [desktop/README.md](desktop/README.md)。
+macOS 14.6 或更高版本可直接捕获系统输出，不需要安装虚拟声卡。开发环境还需要 Rust 1.88+、Node.js、npm 和 Xcode Command Line Tools。
 
-## 使用方式
+首次启用分轨时，应用会下载并校验一个约 **106 MB** 的 HS-TasNet ONNX 模型；后续文件分轨和实时分轨共用缓存，不会重复下载。
+
+```bash
+# 构建 macOS 应用
+npm run build -- --bundles app
+```
+
+桌面版的详细运行方式、输出结构和当前限制见 [desktop/README.md](desktop/README.md)。
+
+## 数据与输出
+
+| 内容 | 位置 |
+|------|------|
+| ONNX 模型缓存 | `~/Library/Application Support/com.MoriTang.StemScore/models/` |
+| 实时录制 | `~/Music/StemScore Recordings/` |
+| 文件分轨 | `~/Music/StemScore Separations/` |
+
+上述目录保留原名是为了兼容已下载的模型和现有输出。
+
+## Python 命令行版（兼容保留）
+
+仓库仍保留 Demucs 命令行流程，适合对延迟不敏感、更看重离线分轨质量的场景。可选的 `--midi` 还会生成 MIDI 和 MusicXML；不再生成 PDF 乐谱。
+
+```bash
+cd stemflow
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 main.py song.mp3
+```
+
+## Python CLI 使用方式
 
 ```bash
 python3 main.py <音频文件> [选项]

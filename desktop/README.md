@@ -1,7 +1,12 @@
-# StemScore Live Desktop
+# StemFlow Desktop
 
-Tauri 2 desktop app for separating local audio files or recording the
-computer's stereo output into drums, bass, other, and vocals.
+Local-first Tauri 2 app for separating audio files or recording the computer's
+stereo output into drums, bass, other, and vocals. The interface has two
+independent workflows: **File Separation** and **Live Separation**.
+
+StemFlow was previously named StemScore. The bundle identifier, model cache,
+and output folder names intentionally retain `StemScore` during the rename so
+existing downloads, macOS permissions, and recordings keep working.
 
 ## Requirements
 
@@ -25,7 +30,19 @@ npm run dev
 On the first start, choose **Download model**. The app downloads the 106 MB
 HS-TasNet ONNX file into the user application-data directory and verifies its
 size and SHA-256 before installing it. The model is never committed to this
-repository.
+repository. File and live separation share this model cache.
+
+## File Separation tab
+
+Choose a WAV, MP3, FLAC, M4A/AAC, or OGG file and start separation. Processing
+runs locally in Rust. When it finishes, drums, bass, other, and vocals appear
+as independent players with play/pause and seek controls.
+
+Results are written to `~/Music/StemScore Separations/<file>-<timestamp>/` as
+`drums.wav`, `bass.wav`, `other.wav`, and `vocals.wav`. File separation does
+not require System Audio Recording permission.
+
+## Live Separation tab
 
 The first recording triggers macOS's System Audio Recording permission prompt.
 Play music through the default stereo output device, then press **Start**.
@@ -50,13 +67,6 @@ recording-<timestamp>/
 Use **record original only** to test system-audio capture without downloading
 or loading ONNX Runtime.
 
-For an existing audio file, use **Choose file** and **Start file separation**.
-WAV, MP3, FLAC, M4A/AAC, and OGG are decoded directly in Rust. Results are
-written to `~/Music/StemScore Separations/<file>-<timestamp>/` as `drums.wav`,
-`bass.wav`, `other.wav`, and `vocals.wav`. File separation works independently
-of system-audio recording permissions. The same four-track player appears when
-file separation finishes.
-
 ## Current constraints
 
 - The live model is stereo and fixed at 44.1 kHz. Other device rates are
@@ -73,6 +83,6 @@ file separation finishes.
 
 ## Model attribution
 
-The streaming model contract and weights come from
+The streaming model contract and weights used by StemFlow come from
 [StemgenRT](https://github.com/sweetspotsoundsystem/stemgen-rt), used under the
 MIT License. Its expected identity is recorded in `src-tauri/src/model.rs`.

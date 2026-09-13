@@ -2,7 +2,7 @@
 
 ## StemgenRT / HS-TasNet streaming model
 
-The streaming model contract and model weights used by StemScore Live are from
+The streaming model contract and model weights used by StemFlow are from
 [sweetspotsoundsystem/stemgen-rt](https://github.com/sweetspotsoundsystem/stemgen-rt).
 
 Copyright (c) 2025 Axel Delafosse

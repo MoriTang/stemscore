@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build standalone executable for StemScore pipeline
+# Build the standalone StemFlow Python pipeline (legacy binary name retained)
 # Output: dist/stemscore/stemscore  (~1.2 GB onedir, includes checkpoint)
 #
 # Usage:
