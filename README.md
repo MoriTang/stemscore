@@ -42,6 +42,25 @@ If MIDI output is needed, the transcription checkpoint can be downloaded ahead o
 python3 download_checkpoint.py   # Pre-download checkpoint
 ```
 
+## Live Desktop App (macOS)
+
+The experimental Tauri 2 desktop app separates local audio files and can also
+record the default stereo system output while separating drums, bass, other,
+and vocals. It uses a Rust audio pipeline and a streaming ONNX model; Python
+and PyTorch are not required.
+
+```bash
+cd desktop
+npm install
+npm run dev
+```
+
+It requires macOS 14.6 or newer. The first model-enabled recording downloads
+and verifies one ~106 MB model; later runs reuse the cached copy. Recordings are
+saved under `~/Music/StemScore Recordings/`; file results are saved under
+`~/Music/StemScore Separations/`. See [desktop/README.md](desktop/README.md) for
+details and current limitations.
+
 ## Usage
 
 ```bash

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>StemScore Live</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">STEMSCORE LIVE</p>
+        <h1>音频分轨工作台</h1>
+        <p class="subtitle">从音频文件生成独立声部，或实时录制并分离电脑正在播放的音乐。</p>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="分轨方式">
+        <button id="file-tab-button" class="tab active" role="tab" aria-selected="true" aria-controls="file-tab">文件分轨</button>
+        <button id="live-tab-button" class="tab" role="tab" aria-selected="false" aria-controls="live-tab">实时分轨</button>
+      </nav>
+
+      <section class="panel model-strip">
+        <div><span class="label">共享分轨模型</span><strong id="model-label">检查中…</strong><small id="model-detail">HS-TasNet · 4 stems · 44.1 kHz</small></div>
+        <button id="download-button" class="secondary">下载模型</button>
+      </section>
+
+      <section id="file-tab" class="tab-panel active" role="tabpanel" aria-labelledby="file-tab-button">
+        <div class="tab-intro">
+          <div><span class="label">FILE SEPARATION</span><h2>选择一个本地音频文件</h2></div>
+          <p>处理完成后可分别试听鼓、贝斯、其他和人声。</p>
+        </div>
+        <section class="panel file-panel">
+          <div class="file-row">
+            <div class="file-copy"><span class="label">输入文件</span><strong id="file-name">尚未选择</strong><small id="file-path">支持 WAV、MP3、FLAC、M4A、AAC、OGG</small></div>
+            <button id="choose-file-button" class="secondary">选择文件</button>
+          </div>
+          <div class="file-progress" aria-label="文件分轨进度"><div id="file-progress-fill"></div></div>
+          <div class="file-actions"><span id="file-progress-label">选择文件后生成四轨 WAV</span><button id="separate-file-button" class="primary" disabled>开始文件分轨</button></div>
+        </section>
+        <section id="file-players-section" class="players" hidden>
+          <div class="players-heading"><div><span class="label">分轨结果</span><strong>试听各个音轨</strong></div><small id="file-players-output"></small></div>
+          <div id="file-stem-players"></div>
+        </section>
+        <p id="file-message" class="message">文件只在本机处理，不会上传。</p>
+      </section>
+
+      <section id="live-tab" class="tab-panel" role="tabpanel" aria-labelledby="live-tab-button" hidden>
+        <div class="live-heading">
+          <div><span class="label">LIVE SEPARATION</span><h2>系统音频实时分轨</h2></div>
+          <div class="live-indicators"><div class="drum-light-row" title="亮度跟随实时鼓轨强度"><i id="drum-light" class="drum-light"></i><span>鼓点灯</span></div><div id="state-pill" class="pill idle">待机</div></div>
+        </div>
+        <section class="stems" aria-label="实时分轨波形">
+          <article><span>DRUMS</span><canvas id="wave-drums" class="stem-wave" aria-label="鼓实时波形"></canvas><b>鼓</b></article>
+          <article><span>BASS</span><canvas id="wave-bass" class="stem-wave" aria-label="贝斯实时波形"></canvas><b>贝斯</b></article>
+          <article><span>OTHER</span><canvas id="wave-other" class="stem-wave" aria-label="其他声部实时波形"></canvas><b>其他</b></article>
+          <article><span>VOCALS</span><canvas id="wave-vocals" class="stem-wave" aria-label="人声实时波形"></canvas><b>人声</b></article>
+        </section>
+        <section class="panel source-panel">
+          <div><span class="label">输入源</span><strong>macOS 默认输出设备</strong><small id="device-name">等待检测</small></div>
+          <div class="meter" aria-label="输入电平"><div id="meter-fill"></div></div>
+        </section>
+        <section class="panel controls">
+          <label class="check-row"><input id="record-only" type="checkbox" /><span><b>仅录制原始音频</b><small>不加载 ONNX 模型，可用于验证系统音频权限</small></span></label>
+          <div class="record-row"><button id="record-button" class="primary">开始录制</button><button id="stop-button" class="stop" disabled>停止</button><div class="timer" id="timer">00:00</div></div>
+        </section>
+        <section class="panel details">
+          <div><span>采样率</span><b id="sample-rate">—</b></div><div><span>已录制</span><b id="frames">0 帧</b></div><div><span>丢帧</span><b id="dropped">0</b></div><div><span>推理耗时</span><b id="inference-time">—</b></div>
+        </section>
+        <section id="live-players-section" class="players" hidden>
+          <div class="players-heading"><div><span class="label">录制结果</span><strong>试听各个音轨</strong></div><small id="live-players-output"></small></div>
+          <div id="live-stem-players"></div>
+        </section>
+        <p id="live-message" class="message">首次录制时，macOS 会请求“系统音频录制”权限。</p>
+        <p id="live-output" class="output"></p>
+      </section>
+
+      <p class="legal">请仅录制和处理你有权使用的音频。本工具不访问缓存文件，也不绕过 DRM。</p>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

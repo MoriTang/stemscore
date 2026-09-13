@@ -42,6 +42,23 @@ python3 main.py song.mp3 --midi
 python3 download_checkpoint.py   # 预下载模型检查点
 ```
 
+## 实时桌面版（macOS）
+
+实验性的 Tauri 2 桌面版既可以分离本地音频文件，也可以录制默认立体声系统输
+出，并在录音过程中实时分离鼓、贝斯、其他和人声。音频链路使用 Rust 和流式
+ONNX 模型，不依赖 Python 或 PyTorch。
+
+```bash
+cd desktop
+npm install
+npm run dev
+```
+
+系统要求为 macOS 14.6 或更高版本。第一次启用实时分轨时会下载并校验一个约
+106 MB 的模型，后续直接复用缓存。录音保存在 `~/Music/StemScore Recordings/`，
+本地文件的分轨结果保存在 `~/Music/StemScore Separations/`。详细说明和当前限
+制见 [desktop/README.md](desktop/README.md)。
+
 ## 使用方式
 
 ```bash
