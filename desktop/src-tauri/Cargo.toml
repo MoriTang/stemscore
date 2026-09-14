@@ -1,20 +1,29 @@
 [package]
-name = "stemscore-desktop"
+name = "stemflow-desktop"
 version = "0.1.0"
 description = "Local-file and real-time system-audio stem separation for StemFlow"
 authors = ["StemFlow contributors"]
 edition = "2021"
 
 [lib]
-name = "stemscore_desktop_lib"
+name = "stemflow_core"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "stemflow-desktop"
+path = "src/main.rs"
+required-features = ["desktop"]
+
+[features]
+default = ["desktop"]
+desktop = ["dep:cpal", "dep:tauri", "dep:tauri-plugin-dialog"]
 
 [build-dependencies]
 tauri-build = { version = "2.5.6", features = [] }
 
 [dependencies]
 anyhow = "1.0"
-cpal = "0.18.2"
+cpal = { version = "0.18.2", optional = true }
 directories = "6.0"
 hound = "3.5.1"
 ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "download-binaries", "copy-dylibs", "tls-rustls", "api-27"] }
@@ -23,5 +32,5 @@ ringbuf = "0.5.1"
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.10"
 symphonia = { version = "0.5.5", features = ["all"] }
-tauri = { version = "2.11.5", features = ["protocol-asset"] }
-tauri-plugin-dialog = "2"
+tauri = { version = "2.11.5", features = ["protocol-asset"], optional = true }
+tauri-plugin-dialog = { version = "2", optional = true }

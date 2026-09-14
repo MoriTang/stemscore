@@ -72,10 +72,12 @@ or loading ONNX Runtime.
 - The live model is stereo and fixed at 44.1 kHz. Other device rates are
   converted on the inference worker; the untouched original stays at the
   device's native rate.
-- Live stems prioritize latency. Re-run `original.wav` through the Python
-  Demucs pipeline when a higher-quality final export is needed.
+- Live stems prioritize latency. Re-run `original.wav` with
+  `stemflow separate --quality high` when a higher-quality Demucs export is
+  needed.
 - Local-file separation currently uses the same low-latency HS-TasNet model.
-  The Python Demucs CLI remains the higher-quality option for offline exports.
+  The optional `--quality high` Demucs backend remains the higher-quality
+  option for offline exports.
 - The first implementation captures the selected default output mix. A later
   macOS-specific adapter can narrow the tap to one process such as Music.
 - Do not use the app to bypass DRM or copy audio you do not have permission to

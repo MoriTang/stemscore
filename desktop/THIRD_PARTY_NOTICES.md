@@ -24,3 +24,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Demucs (optional, not bundled)
+
+The `--quality high` CLI mode can invoke an external installation of
+[facebookresearch/demucs](https://github.com/facebookresearch/demucs), which is
+available under the MIT License. Demucs, PyTorch, and their model weights are
+not included in the default StemFlow binaries.

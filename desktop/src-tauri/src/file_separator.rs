@@ -183,6 +183,61 @@ pub fn separate_audio_file(
     Ok(())
 }
 
+pub fn create_accompaniment_mix(
+    output_dir: &Path,
+    excluded_stem: &str,
+) -> Result<std::path::PathBuf> {
+    const STEMS: [&str; 4] = ["drums", "bass", "other", "vocals"];
+    if !STEMS.contains(&excluded_stem) {
+        bail!("未知声部 '{excluded_stem}'，可选值：drums, bass, other, vocals");
+    }
+
+    let mut spec = None;
+    let mut merged: Option<Vec<f32>> = None;
+    for name in STEMS {
+        if name == excluded_stem {
+            continue;
+        }
+        let path = output_dir.join(format!("{name}.wav"));
+        let reader = hound::WavReader::open(&path)
+            .with_context(|| format!("无法读取分轨结果：{}", path.display()))?;
+        let current_spec = reader.spec();
+        if current_spec.sample_format != WavSampleFormat::Float
+            || current_spec.bits_per_sample != 32
+        {
+            bail!("分轨结果不是 32-bit float WAV：{}", path.display());
+        }
+        if let Some(expected) = spec {
+            if current_spec != expected {
+                bail!("分轨结果 WAV 格式不一致");
+            }
+        } else {
+            spec = Some(current_spec);
+        }
+        let samples = reader
+            .into_samples::<f32>()
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        if let Some(target) = merged.as_mut() {
+            if target.len() != samples.len() {
+                bail!("分轨结果 WAV 长度不一致");
+            }
+            for (target, sample) in target.iter_mut().zip(samples) {
+                *target += sample;
+            }
+        } else {
+            merged = Some(samples);
+        }
+    }
+
+    let output_path = output_dir.join(format!("accompaniment-without-{excluded_stem}.wav"));
+    let mut writer = WavWriter::create(&output_path, spec.context("没有可合并的分轨")?)?;
+    for sample in merged.unwrap_or_default() {
+        writer.write_sample(sample)?;
+    }
+    writer.finalize()?;
+    Ok(output_path)
+}
+
 fn append_stereo(samples: &[f32], channels: usize, output: &mut Vec<StereoFrame>) -> usize {
     if channels == 0 {
         return 0;
@@ -288,6 +343,41 @@ mod tests {
         let mut output = Vec::new();
         assert_eq!(append_stereo(&[0.1, -0.1, 0.2, -0.2], 2, &mut output), 2);
         assert_eq!(output, vec![[0.1, -0.1], [0.2, -0.2]]);
+    }
+
+    #[test]
+    fn accompaniment_mix_preserves_stems_and_excludes_requested_track() {
+        let root = std::env::temp_dir().join(format!("stemflow-solo-test-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let spec = WavSpec {
+            channels: 2,
+            sample_rate: MODEL_SAMPLE_RATE,
+            bits_per_sample: 32,
+            sample_format: WavSampleFormat::Float,
+        };
+        for (name, value) in [
+            ("drums", 0.1_f32),
+            ("bass", 0.2),
+            ("other", 0.3),
+            ("vocals", 0.4),
+        ] {
+            let mut writer = WavWriter::create(root.join(format!("{name}.wav")), spec).unwrap();
+            writer.write_sample(value).unwrap();
+            writer.write_sample(value).unwrap();
+            writer.finalize().unwrap();
+        }
+
+        let output = create_accompaniment_mix(&root, "vocals").unwrap();
+        for stem in ["drums", "bass", "other", "vocals"] {
+            assert!(root.join(format!("{stem}.wav")).is_file());
+        }
+        let merged = hound::WavReader::open(output)
+            .unwrap()
+            .into_samples::<f32>()
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .unwrap();
+        assert!((merged[0] - 0.6).abs() < 1e-6);
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

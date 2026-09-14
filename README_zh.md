@@ -42,105 +42,68 @@ npm run build -- --bundles app
 
 上述目录保留原名是为了兼容已下载的模型和现有输出。
 
-## Python 命令行版（兼容保留）
+## Rust CLI
 
-仓库仍保留 Demucs 命令行流程，适合对延迟不敏感、更看重离线分轨质量的场景。可选的 `--midi` 还会生成 MIDI 和 MusicXML；不再生成 PDF 乐谱。
-
-```bash
-cd stemflow
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 main.py song.mp3
-```
-
-## Python CLI 使用方式
+默认 CLI 与桌面端共用 Rust 解码、重采样、模型缓存和 ONNX 分轨核心，不安装也不加载 Python/PyTorch。
 
 ```bash
-python3 main.py <音频文件> [选项]
+cargo build --release --manifest-path cli/Cargo.toml
+./cli/target/release/stemflow separate song.mp3
+
+# 或安装到 ~/.cargo/bin，之后可直接使用 stemflow 命令
+cargo install --path cli
 ```
 
-| 选项 | 说明 |
-|------|------|
-| `-o DIR` | 输出目录（默认 `./output`） |
-| `-m MODEL` | 分离模型（默认 `htdemucs`） |
-| `--midi` | 开启转录和制谱 |
-| `--fast` | 快速模式，分离约 2x 加速 |
-| `--solo STEM` | 仅提取指定声部，其余合并 |
-| `--skip-separation` | 跳过分离，使用已有 stems/ |
-| `--skip-transcribe` | 跳过转录，使用已有 midi/ |
-| `--silence-threshold RMS` | 静音检测阈值（默认 0.001） |
-| `-h` | 查看完整参数 |
-
-### 示例
+首次快速分轨会自动下载并校验共享模型，后续直接复用缓存。
 
 ```bash
-# 最基本：只分离 4 轨 WAV
-python3 main.py song.mp3
+# 指定输出目录
+stemflow separate song.mp3 --output ./result
 
-# 完整流程：分离 + MIDI + 乐谱
-python3 main.py song.mp3 --midi
+# 保留四条音轨，额外生成去人声伴奏
+stemflow separate song.mp3 --solo vocals
 
-# 快速模式
-python3 main.py song.mp3 --midi --fast
-
-# 卡拉OK：提取人声，其余合并为伴奏
-python3 main.py song.mp3 --solo vocals --midi
-
-# 6 轨分离（实验性，guitar 尚可、piano 有杂音）
-python3 main.py song.mp3 -m htdemucs_6s --midi
-
-# 跳过分离和转录，只重新生成乐谱
-python3 main.py song.mp3 --skip-separation --skip-transcribe --midi
+# 查看、下载或校验共享模型
+stemflow model status
+stemflow model download
+stemflow model verify
 ```
 
-## 输出结构
+快速分轨输出：
 
-```
-output/
-├── stems/          # 分离后的 WAV 音轨
-│   ├── bass.wav
-│   ├── drums.wav
-│   ├── other.wav
-│   └── vocals.wav
-├── midi/           # MIDI 文件（需 --midi）
-└── musicxml/       # MusicXML 乐谱（需 --midi）
+```text
+output/stems/
+├── drums.wav
+├── bass.wav
+├── other.wav
+└── vocals.wav
 ```
 
-## 模型选择
+`--solo vocals` 会保留上述四个文件，并额外生成 `accompaniment-without-vocals.wav`，不会删除分轨结果。
 
-| 模型 | 声轨数 | 说明 |
-|------|--------|------|
-| `htdemucs` | 4 | 默认：drums, bass, other, vocals |
-| `htdemucs_ft` | 4 | 微调版，相同声轨 |
-| `hdemucs_mmi` | 4 | 多乐器训练，相同声轨 |
-| `htdemucs_6s` | 6 | 实验性：+ guitar, piano |
+## 可选高质量 Demucs 后端
 
-## 乐器乐谱优化
-
-制谱时根据声部自动应用：
-
-| 声部 | 谱号 | 格式 |
-|------|------|------|
-| bass | 低音谱号 | 单行 |
-| drums | 打击乐谱号 | 节奏记谱 |
-| guitar | 低八度高音谱号 | 单行 |
-| piano | 大谱表 | 高低音双行 |
-| vocals | 高音谱号 | 单行 |
-
-MusicXML 可导入 [MuseScore](https://musescore.org)（免费）直接查看编辑。
-
-## 构建独立可执行文件
+只有显式选择高质量模式时才需要 Demucs。建议安装到独立虚拟环境：
 
 ```bash
-./build.sh
-# 产物：dist/stemscore/stemscore
-# 使用：dist/stemscore/stemscore song.mp3 --midi
+python3 -m venv .venv-demucs
+.venv-demucs/bin/pip install -r backends/demucs/requirements.txt
+
+stemflow separate song.mp3 \
+  --quality high \
+  --python .venv-demucs/bin/python \
+  --model htdemucs
 ```
 
-## 古典音乐
+也可设置 `STEMFLOW_DEMUCS_PYTHON` 避免每次传入 `--python`。默认 Rust 构建不携带该环境、Demucs 权重或 Python 解释器。项目已移除 PyInstaller、MIDI 转录和 MusicXML 生成功能。
 
-可以用，但分离精度会下降——Demucs 训练数据以流行/摇滚为主。管弦乐大部分乐器会落入 `other` 轨，无法拆分为独立分谱。静音检测会自动跳过空轨。
+## 当前限制
+
+- 快速 HS-TasNet 模型固定为 44.1 kHz 立体声四轨，优先保证延迟，离线质量低于 Demucs。
+- 高质量模式仍需外部 Python/PyTorch 环境。
+- 桌面端系统音频捕获目前需要 macOS 14.6+；Rust 文件分轨可跨平台。
+- 古典与管弦乐的大部分乐器会进入 `other` 轨。
+- 请勿用 StemFlow 绕过 DRM 或处理无权录制的音频。
 
 ## 许可证
 

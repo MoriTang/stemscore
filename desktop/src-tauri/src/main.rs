@@ -1,3 +1,3 @@
 fn main() {
-    stemscore_desktop_lib::run();
+    stemflow_core::run();
 }

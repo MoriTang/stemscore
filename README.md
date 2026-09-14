@@ -42,105 +42,78 @@ See [desktop/README.md](desktop/README.md) for detailed usage, output structure,
 
 These directories retain the former name for compatibility with existing models and outputs.
 
-## Python CLI (Retained for Compatibility)
+## Rust CLI
 
-The Demucs command-line pipeline remains available for offline jobs where quality matters more than latency. Optional `--midi` processing creates MIDI and MusicXML; PDF score generation has been removed.
-
-```bash
-cd stemflow
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 main.py song.mp3
-```
-
-## Python CLI Usage
+The default CLI uses the same Rust decoder, resampler, model cache, and ONNX
+separator as the desktop app. Python and PyTorch are not installed or loaded.
 
 ```bash
-python3 main.py <audio_file> [options]
+cargo build --release --manifest-path cli/Cargo.toml
+./cli/target/release/stemflow separate song.mp3
+
+# Or install the command into ~/.cargo/bin
+cargo install --path cli
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-o DIR` | Output directory (default: `./output`) |
-| `-m MODEL` | Separation model (default: `htdemucs`) |
-| `--midi` | Enable transcription and sheet music |
-| `--fast` | Fast mode: ~2x separation speed (slightly lower quality) |
-| `--solo STEM` | Extract a single stem, merge rest into other.wav |
-| `--skip-separation` | Skip separation, use existing stems/ |
-| `--skip-transcribe` | Skip transcription, use existing midi/ |
-| `--silence-threshold RMS` | Silence detection threshold (default: 0.001) |
-| `-h` | Show all options |
-
-### Examples
+The first fast separation downloads and verifies the shared model. Later runs
+reuse the cached file.
 
 ```bash
-# Basic: separate 4 stems
-python3 main.py song.mp3
+# Choose an output directory
+stemflow separate song.mp3 --output ./result
 
-# Full pipeline: stems + MIDI + sheet music
-python3 main.py song.mp3 --midi
+# Keep all four stems and add a mix without vocals
+stemflow separate song.mp3 --solo vocals
 
-# Fast mode
-python3 main.py song.mp3 --midi --fast
-
-# Karaoke: extract vocals, merge rest into accompaniment
-python3 main.py song.mp3 --solo vocals --midi
-
-# 6-stem separation (experimental; guitar ok, piano has artifacts)
-python3 main.py song.mp3 -m htdemucs_6s --midi
-
-# Re-generate sheet music from existing stems + MIDI
-python3 main.py song.mp3 --skip-separation --skip-transcribe --midi
+# Inspect, download, or verify the shared model
+stemflow model status
+stemflow model download
+stemflow model verify
 ```
 
-## Output Structure
+Fast results are written to:
 
-```
-output/
-├── stems/          # Separated WAV tracks
-│   ├── bass.wav
-│   ├── drums.wav
-│   ├── other.wav
-│   └── vocals.wav
-├── midi/           # MIDI files (requires --midi)
-└── musicxml/       # MusicXML scores (requires --midi)
+```text
+output/stems/
+├── drums.wav
+├── bass.wav
+├── other.wav
+└── vocals.wav
 ```
 
-## Models
+`--solo vocals` preserves those four files and adds
+`accompaniment-without-vocals.wav`; it never deletes generated stems.
 
-| Model | Stems | Notes |
-|-------|-------|-------|
-| `htdemucs` | 4 | Default: drums, bass, other, vocals |
-| `htdemucs_ft` | 4 | Fine-tuned, same sources |
-| `hdemucs_mmi` | 4 | Multi-instrument trained, same sources |
-| `htdemucs_6s` | 6 | Experimental: + guitar, piano |
+## Optional High-quality Demucs Backend
 
-## Instrument-Specific Formatting
-
-Sheet music is automatically optimized per stem:
-
-| Stem | Clef | Layout |
-|------|------|--------|
-| bass | Bass clef | Single staff |
-| drums | Percussion clef | Rhythm notation |
-| guitar | Treble 8vb clef | Single staff |
-| piano | Grand staff | Treble + bass |
-| vocals | Treble clef | Single staff |
-
-MusicXML files can be opened directly in [MuseScore](https://musescore.org) (free).
-
-## Building a Standalone Executable
+Demucs remains available only when explicitly requested. Install it in a
+separate virtual environment:
 
 ```bash
-./build.sh
-# Output: dist/stemscore/stemscore
-# Usage:  dist/stemscore/stemscore song.mp3 --midi
+python3 -m venv .venv-demucs
+.venv-demucs/bin/pip install -r backends/demucs/requirements.txt
+
+stemflow separate song.mp3 \
+  --quality high \
+  --python .venv-demucs/bin/python \
+  --model htdemucs
 ```
 
-## Classical Music
+You can set `STEMFLOW_DEMUCS_PYTHON` instead of passing `--python` each time.
+The default Rust build does not bundle this environment, Demucs weights, or a
+Python interpreter. PyInstaller, MIDI transcription, and MusicXML generation
+are no longer part of the project.
 
-Supported, but separation quality is lower — Demucs is trained on pop/rock. Most orchestral instruments end up in the `other` stem and cannot be split into individual parts. Silence detection automatically skips empty stems.
+## Current Constraints
+
+- The fast HS-TasNet model is fixed to four stereo stems at 44.1 kHz and
+  prioritizes latency over Demucs-level offline quality.
+- High-quality mode still requires an external Python/PyTorch environment.
+- The desktop system-audio capture path currently requires macOS 14.6 or newer;
+  Rust file separation is portable.
+- Classical and orchestral instruments mostly fall into the `other` stem.
+- Do not use StemFlow to bypass DRM or process audio you do not have permission
+  to record.
 
 ## License
 

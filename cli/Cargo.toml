@@ -1,0 +1,15 @@
+[package]
+name = "stemflow-cli"
+version = "0.1.0"
+description = "Local-first music stem separation CLI"
+license = "MIT"
+edition = "2021"
+
+[[bin]]
+name = "stemflow"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+stemflow-core = { package = "stemflow-desktop", path = "../desktop/src-tauri", default-features = false }
