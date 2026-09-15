@@ -1,5 +1,7 @@
 # StemFlow
 
+[简体中文说明](README_zh.md)
+
 A local-first AI music stem separator for audio files and the stereo output currently playing on macOS.
 
 > Formerly StemScore. The GitHub repository and product-facing name are now StemFlow. Local data directories retain the former name so existing model downloads and output access continue to work.
